@@ -1,0 +1,4 @@
+faster-whisper>=1.2.1,<2
+av>=11
+numpy>=1.21.6
+qrcode[pil]>=7.4,<9

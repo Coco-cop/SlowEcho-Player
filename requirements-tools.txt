@@ -1,0 +1,2 @@
+# Optional split_video.py helper (or install system ffmpeg on PATH).
+imageio-ffmpeg>=0.4.9,<1

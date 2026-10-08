@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SlowEcho Player · 英语精听</title>
+<script>
+try { const p = JSON.parse(localStorage.getItem('elp.appearance') || '{}'); document.documentElement.dataset.theme = p.theme === 'dark' || (p.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; } catch (_) {}
+</script>
+<link rel="stylesheet" href="styles/player.css">
+<link rel="stylesheet" href="styles/liquid-glass.css">
+</head>
+<body>
+
+<!-- ================= 顶栏 ================= -->
+<header class="topbar">
+  <div class="logo"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>SlowEcho Player <small>听见进步</small></div>
+  <button class="btn primary" id="btnOpenVideo">打开视频</button>
+  <button class="btn" id="btnOpenSub">字幕工具</button>
+  <button class="btn" id="btnLibrary">文件库</button>
+  <button class="btn" id="btnOfflinePack" title="下载离线学习包">离线学习包</button>
+  <span class="spacer"></span>
+  <details class="appearance-menu" id="appearanceMenu">
+    <summary class="btn" aria-label="外观与动效设置">外观 <span aria-hidden="true">⌄</span></summary>
+    <div class="appearance-panel">
+      <strong>外观与动效</strong>
+      <div class="theme-switch" role="group" aria-label="主题">
+        <button type="button" data-theme-choice="system">自动</button>
+        <button type="button" data-theme-choice="light">浅色</button>
+        <button type="button" data-theme-choice="dark">深色</button>
+      </div>
+      <label class="appearance-option"><span>减少动效<small>更安静的交互反馈</small></span><input type="checkbox" id="reduceMotion"></label>
+      <label class="appearance-option"><span>减少透明度<small>让控件背景更清晰</small></span><input type="checkbox" id="reduceTransparency"></label>
+      <p>自动主题跟随系统；辅助功能优先遵循系统设置。</p>
+    </div>
+  </details>
+  <span class="badge" id="statusBadge">未加载视频</span>
+  <button class="btn ghost" id="btnHelp" title="快捷键与说明" aria-label="快捷键与说明">?</button>
+  <button class="btn ghost" id="btnSettings" title="设置" aria-label="设置">⚙</button>
+</header>
+
+<div class="workspace-header">
+  <div>
+    <div class="eyebrow">LISTEN · UNDERSTAND · REPEAT</div>
+    <h1>每一句，都听得更清楚。</h1>
+    <p id="workspaceHint">打开一段视频，开始今天的精听。</p>
+  </div>
+
+</div>
+
+<main>
+  <!-- ================= 左：播放区 ================= -->
+  <section class="vcol">
+    <div class="resume-bar" id="resumeBar" hidden>
+      <span class="resume-text"><span id="resumeText"></span><span class="resume-hint" id="resumeHint"></span></span>
+      <button class="btn primary" id="resumeGo">继续上次</button>
+      <button class="btn" id="resumeSaveVideo" hidden title="把视频也存进电脑文件库，下次打开就能真正自动续播">以后自动保存视频</button>
+      <button class="btn ghost" id="resumeClear" title="清除记录后从头开始">清除记录</button>
+      <button class="btn ghost" id="resumeDismiss" title="不再提示这条记录">✕</button>
+    </div>
+    <div class="video-slot">
+    <div class="vwrap" id="vwrap">
+      <video id="video" playsinline webkit-playsinline x5-playsinline preload="metadata"></video>
+      <div class="overlay hidden" id="overlay">
+        <div class="o-en" id="oEn"></div>
+        <div class="o-zh hidden" id="oZh"></div>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <div class="empty-art" aria-hidden="true"><svg viewBox="0 0 120 100" fill="none"><rect x="12" y="12" width="82" height="64" rx="18" stroke="currentColor" stroke-opacity=".18" fill="currentColor" fill-opacity=".04" transform="rotate(-9 12 12)"/><rect x="22" y="20" width="84" height="64" rx="18" fill="currentColor" fill-opacity=".07" stroke="currentColor" stroke-opacity=".25"/><path d="M58 39v26l21-13-21-13Z" fill="currentColor" fill-opacity=".8"/><path d="M36 93h56" stroke="currentColor" stroke-opacity=".15" stroke-width="3" stroke-linecap="round"/></svg></div>
+        <h2>把喜欢的视频，变成听力练习。</h2>
+        <p>拖入视频或音频，即可开始。<br>支持导入双语字幕，也可以自动生成字幕。</p>
+        <button class="btn primary" id="btnWelcomeOpen">选择视频</button>
+        <span class="format-hint">视频 / 音频 · SRT / VTT 字幕</span>
+        <div class="kbd-hint">
+          <kbd>空格</kbd> 播放 &nbsp; <kbd>←</kbd><kbd>→</kbd> 切句 &nbsp; <kbd>L</kbd> 循环
+        </div>
+      </div>
+    </div>
+
+    </div>
+    <div class="controls">
+      <div class="progress-row">
+        <span class="time" id="tCur">00:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+        <span class="time" id="tDur">00:00</span>
+      </div>
+      <div class="inputs-row">
+        <div class="transport-group" role="group" aria-label="播放控制">
+        <button class="icon-btn big" id="btnPrev" title="上一句 (←)">⏮</button>
+        <button class="icon-btn big" id="btnPlay" title="播放/暂停 (空格)" aria-label="播放（空格）" data-playing="false"></button>
+        <button class="icon-btn big" id="btnNext" title="下一句 (→)">⏭</button>
+        <div class="sep"></div>
+        <button class="icon-btn" id="btnRepeat" title="重复本句 (R)">重复</button>
+        <button class="icon-btn" id="btnLoop" title="单句循环 (L)">循环</button>
+        <div class="sep"></div>
+        <div class="speed-control">
+          <button type="button" class="icon-btn speed-trigger" id="speedToggle" aria-expanded="false" aria-controls="speedPanel" title="展开自定义倍速">倍速 <span id="speedCurrent">1.00×</span><span class="speed-chevron" aria-hidden="true">⌃</span></button>
+          <div class="speed-presets" role="group" aria-label="常用倍速">
+            <button type="button" data-speed="0.2" aria-pressed="false">0.2×</button>
+            <button type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+            <button type="button" data-speed="0.75" aria-pressed="false">0.75×</button>
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          </div>
+          <div class="speed-panel" id="speedPanel" role="group" aria-label="自定义倍速" hidden>
+            <div class="speed-panel-heading"><span>自定义倍速</span><button type="button" class="speed-value" id="speedValue" title="恢复正常速度" aria-label="当前 1.00 倍，点击恢复正常速度">1.00×</button></div>
+            <input type="range" id="speed" min="0.1" max="2" step="0.05" value="1" aria-label="播放速度" aria-valuetext="1.00 倍" title="拖动调整播放速度">
+            <div class="speed-limits" aria-hidden="true"><span>0.10×</span><span>2.00×</span></div>
+          </div>
+        </div>
+        <button class="icon-btn" id="btnLoopGap" title="循环之间的停顿">停顿 0s</button>
+        </div>
+        <div class="study-group" role="group" aria-label="字幕与精听控制">
+        <label class="control-label" for="offsetInput">字幕偏移</label>
+        <input type="number" id="offsetInput" value="0" step="0.1" min="-60" max="60" title="字幕整体偏移（秒）。正数 = 字幕延后出现">
+        <div class="sep"></div>
+        <button class="icon-btn on" id="btnOverlay" aria-pressed="true" title="仅开关视频上的外挂字幕，右侧字幕和音标仍可使用">画面字幕</button>
+        <button class="icon-btn on" id="btnEn" title="显示英文">EN</button>
+        <button class="icon-btn" id="btnIpa" title="显示/隐藏句子美音音标">音标</button>
+        <button class="icon-btn on" id="btnZh" title="显示中文">中</button>
+        <button class="icon-btn" id="btnSplit" title="将当前长句拆成便于循环的短意群">精听分段</button>
+        <button class="icon-btn" id="btnUndoSplit" hidden>撤销分段</button>
+        <button class="icon-btn" id="btnTranslateAll" title="批量翻译全部字幕">译全部</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 右：字幕 / 生词本 ================= -->
+  <aside class="scol">
+    <div class="learning-heading"><span>学习笔记</span><button class="icon-btn on" id="btnAutoScroll" title="跟随播放自动滚动">跟随播放</button></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="subs">字幕</button>
+      <button class="tab" data-tab="vocab">生词本 <span id="vocabCount"></span></button>
+      <button class="tab" data-tab="paste">粘贴文本</button>
+    </div>
+
+    <div class="pane" id="paneSubs">
+      <div class="empty" id="subsEmpty">
+        <div class="note-art" aria-hidden="true">≋</div>
+        <b>从一句英文开始</b>
+        导入字幕，逐句精听、查词与跟读。<br>
+        <button class="btn" id="btnOpenSub2">导入字幕文件</button>
+      </div>
+      <div id="libraryStatus" role="status" title="点击重试保存" style="cursor:pointer;padding:8px 12px;font-size:12px;color:var(--tx3);overflow-wrap:anywhere">字幕自动保存</div>
+      <div id="segList"></div>
+    </div>
+
+    <div class="pane" id="paneVocab" hidden>
+      <div class="empty" id="vocabEmpty">
+        <b>生词本还是空的</b>
+        在字幕里点任意单词，卡片里点「⭐ 加入生词本」<br>
+        已收藏的词会在字幕里用 <span style="border-bottom:2px solid var(--warn);color:var(--warn)">橙色下划线</span> 标出
+      </div>
+      <div id="vocabList"></div>
+    </div>
+
+    <div class="pane" id="panePaste" hidden>
+      <div class="paste-box">
+        <div style="font-size:12.5px;color:var(--tx3);line-height:1.7">
+          粘贴纯英文文本（每行一句）。若视频已加载，将按视频时长平均分配时间轴；更推荐用工具离线生成精确字幕。
+        </div>
+        <textarea id="pasteText" placeholder="Paste English transcript here, one sentence per line..."></textarea>
+        <div class="row">
+          <button class="btn primary" id="btnPasteLoad">生成时间轴并载入</button>
+          <button class="btn" id="btnPasteDemo">填入示例</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="export-row">
+      <button class="btn" id="btnExportSub" style="flex:1;justify-content:center">导出字幕 SRT</button>
+      <button class="btn" id="btnExportVocab" style="flex:1;justify-content:center">导出生词本</button>
+    </div>
+  </aside>
+</main>
+
+<input type="file" id="fileVideo" accept="video/*,audio/*" hidden>
+<input type="file" id="fileSub" accept=".srt,.vtt,.txt,.ass,.ssa,.json" hidden>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/runtime.js"></script>
+<script src="js/core.js"></script>
+<script src="js/subtitle-parser.js"></script>
+<script src="js/library.js"></script>
+<script src="js/render.js"></script>
+<script src="js/playback.js"></script>
+<script src="js/dictionary-core.js"></script>
+<script src="js/ipa-words.js"></script>
+<script src="js/dictionary.js"></script>
+<script src="js/ipa-sentences.js"></script>
+<script src="js/deepseek.js"></script>
+<script src="js/translation.js"></script>
+<script src="js/vocabulary.js"></script>
+<script src="js/subtitle-tools.js"></script>
+<script src="js/export.js"></script>
+<script src="js/recognition.js"></script>
+<script src="js/events.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/help.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/listening.js"></script>
+<script src="js/resume.js"></script>
+<script src="js/init.js"></script>
+<script src="js/glass-ui.js"></script>
+<!-- 离线学习包：由 offline-pack.js 提供（导出「视频 + 字幕」自包含 HTML，断网也能学） -->
+<script src="offline-pack.js"></script>
+</body>
+</html>

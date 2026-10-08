@@ -1,0 +1,35 @@
+# Local Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Portable bundles, models and browser profiles
+/runtime/
+/data/
+/.desktop-session/
+/.desktop-profile/
+*.exe
+*.dll
+*.onnx
+*.bin
+
+# Credentials and private state (keep source JSON/HTML/SRT eligible)
+.env
+.env.*
+!.env.example
+storage.json
+local-media.json
+*.log
+/_echoplayer_phone.png
+/work/
+/dist/
+/build/
+*.zip
+
+# Editor / OS state
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
